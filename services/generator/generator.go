@@ -13,7 +13,7 @@ func GenerateIso(userDataConfig string) error {
 	if err != nil {
 		log.Fatalf("Failed to create temp directory: %v", err)
 	}
-	defer os.RemoveAll(tempDir) // Clean up
+	defer os.RemoveAll(tempDir) // Clean up tmp directory when done.
 
 	userDataPath := filepath.Join(tempDir, "user-data")
 	if err := os.WriteFile(userDataPath, []byte(userDataConfig), 0644); err != nil {
