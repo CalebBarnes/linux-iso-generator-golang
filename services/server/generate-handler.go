@@ -2,12 +2,14 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/calebbarnes/linux-iso-generator-golang/services/generator"
 	"github.com/calebbarnes/linux-iso-generator-golang/services/templates"
 )
+
+var isDebug = false
 
 type generateIsoRequest struct {
 	Hostname string   `json:"hostname"`
@@ -37,9 +39,27 @@ func generateIsoHandler(w http.ResponseWriter, r *http.Request) {
 		SSHKeys:  req.SSHKeys,
 	}
 
-	pretty, _ := json.MarshalIndent(userData, "", "  ")
-	fmt.Println(string(pretty))
+	userDataString := templates.GetUserDataConfig(userData)
+	if isDebug {
+		logDebugValues(userData, userDataString)
+	}
+
+	err := generator.GenerateIso(userDataString)
+	if err != nil {
+		log.Printf("Failed to generate ISO: %v", err)
+		http.Error(w, "Failed to generate ISO", http.StatusInternalServerError)
+		return
+	}
+	log.Println("ISO generation initiated.")
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "ISO generation started"})
+}
+
+func logDebugValues(userData templates.UserData, userDataString string) {
+	pretty, _ := json.MarshalIndent(userData, "", "  ")
+	log.Println(string(pretty))
+
+	log.Println("UserData:")
+	log.Println(userDataString)
 }
