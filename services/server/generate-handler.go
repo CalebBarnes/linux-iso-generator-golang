@@ -11,11 +11,15 @@ import (
 
 var isDebug = false
 
-type generateIsoRequest struct {
+type requestData struct {
 	Hostname string   `json:"hostname"`
 	User     string   `json:"user"`
 	Password string   `json:"password"`
 	SSHKeys  []string `json:"ssh_keys"`
+}
+
+type responseData struct {
+	Status string `json:"status"`
 }
 
 func generateIsoHandler(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +28,7 @@ func generateIsoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req generateIsoRequest
+	var req requestData
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -32,16 +36,16 @@ func generateIsoHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Received request to generate ISO for host %s", req.Hostname)
 
-	userData := templates.UserData{
+	userDataString := templates.GetUserDataConfig(templates.UserData{
 		Hostname: req.Hostname,
 		Username: req.User,
 		Password: req.Password,
 		SSHKeys:  req.SSHKeys,
-	}
+	})
 
-	userDataString := templates.GetUserDataConfig(userData)
 	if isDebug {
-		logDebugValues(userData, userDataString)
+		log.Println("UserData:")
+		log.Println(userDataString)
 	}
 
 	err := generator.GenerateIso(userDataString)
@@ -53,13 +57,5 @@ func generateIsoHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("ISO generation initiated.")
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "ISO generation started"})
-}
-
-func logDebugValues(userData templates.UserData, userDataString string) {
-	pretty, _ := json.MarshalIndent(userData, "", "  ")
-	log.Println(string(pretty))
-
-	log.Println("UserData:")
-	log.Println(userDataString)
+	json.NewEncoder(w).Encode(responseData{Status: "pending"})
 }
